@@ -1,46 +1,37 @@
-const http = require('http');
-const connect = require('connect');
-const httpProxy = require('http-proxy');
-const transformerProxy = require('transformer-proxy');
+const http = require('http'),
+    connect = require('connect'),
+    httpProxy = require('http-proxy'),
+    transformerProxy = require('transformer-proxy');
 
-const config = {
-    port: 5050,
-    target: 'http://127.0.0.1:3000'
+const CONFIG = {
+    PORT: 5050,
+    TARGET: 'http://127.0.0.1:3000',
+    REQUEST_HEADERS: [
+        { name: 'X-Secret-Header', value: 'injected header value' },
+    ],
+    RESPONSE_HEADERS: [
+        { name: 'X-Secret-Header', value: null }, // null => remove header
+    ],
 };
 
-// Create a proxy server with custom application logic
 const proxy = httpProxy.createProxyServer({});
-
 proxy.on('proxyReq', (proxyReq, req, res, options) => {
-    console.log('Raw Request from the target', req.headers);
-
-    // REQUEST HEADER MANIPULATION GOES HERE
-    proxyReq.setHeader('X-Secret-Header', 'abcd');
-    proxyReq.removeHeader('user-agent');
+    console.log('Raw reqHeaders:', proxyReq._headers);
+    for (let header of CONFIG.REQUEST_HEADERS) {
+        if (header.value === null) proxyReq.removeHeader(header.name);
+        else proxyReq.setHeader(header.name, header.value);
+    }
 });
-
 proxy.on('proxyRes', (proxyRes, req, res) => {
-    console.log('Raw Response from the server', proxyRes.headers);
+    console.log('Raw respHeaders:', proxyRes.headers);
 });
 
 const app = connect();
-
-// RESPONSE HEADER MANIPULATION GOES HERE
-const headers = [{
-    name: 'X-Secret-Header',
-    // removes the secret header from the response ("efgh")
-    value: null
-}];
-
-app.use(transformerProxy(i => i, { headers: headers }));
-
+app.use(transformerProxy(i => i, { headers: CONFIG.RESPONSE_HEADERS }));
 app.use((req, res) => {
-    // REQUEST HEADER MANIPULATION GOES HERE TOO
-    // delete req.headers['user-agent'];
-    proxy.web(req, res, { target: config.target });
+    // Also possible here to change headers: delete req.headers['user-agent'];
+    proxy.web(req, res, { target: CONFIG.TARGET });
 });
 
 const server = http.createServer(app);
-
-console.log("listening on port " + config.port)
-server.listen(config.port);
+server.listen(CONFIG.PORT);
