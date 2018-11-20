@@ -15,7 +15,7 @@ proxy.on('proxyReq', (proxyReq, req, res, options) => {
     console.log('Raw Request from the target', req.headers);
 
     // REQUEST HEADER MANIPULATION GOES HERE
-    proxyReq.setHeader('X-Special-Proxy-Header', 'foobar');
+    proxyReq.setHeader('X-Secret-Header', 'abcd');
     proxyReq.removeHeader('user-agent');
 });
 
@@ -27,7 +27,8 @@ const app = connect();
 
 // RESPONSE HEADER MANIPULATION GOES HERE
 const headers = [{
-    name: 'x-powered-by',
+    name: 'X-Secret-Header',
+    // removes the secret header from the response ("efgh")
     value: null
 }];
 
